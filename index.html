@@ -1,27 +1,352 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My GitHub Page</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expense Tracker</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
-      background-color: #f4f4f4;
+    :root{
+      --bg:#0f172a;
+      --card:#0b1220;
+      --accent:#06b6d4;
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
     }
-    h1 {
-      color: #333;
-    }
-    p {
-      color: #666;
-    }
+    *{box-sizing:border-box}
+    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:linear-gradient(180deg,#071025 0%, #071728 60%); color:#e6eef6; padding:20px}
+    .container{max-width:1000px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    .top-controls{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#042027;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+
+    /* left column */
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .filters{display:flex;gap:8px;flex-wrap:wrap}
+    .filters select,input{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px;color:inherit}
+
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    thead th{text-align:left;padding:10px 8px;font-size:13px;color:var(--muted)}
+    tbody td{padding:10px 8px;border-top:1px dashed rgba(255,255,255,0.03);font-size:14px}
+    .actions button{margin-right:6px;padding:6px 8px;border-radius:6px}
+
+    /* right column */
+    .summary{display:grid;grid-template-columns:repeat(1,1fr);gap:10px}
+    .stat{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))}
+    .stat small{color:var(--muted)}
+    .big{font-size:20px;font-weight:700}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal{width:100%;max-width:520px;background:linear-gradient(180deg,#041422,#06203a);padding:18px;border-radius:12px}
+    .modal h2{margin:0 0 8px}
+    .form-row{display:flex;gap:8px;margin-bottom:8px}
+    .form-row input,.form-row select,textarea{flex:1;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit}
+
+    footer{margin-top:16px;text-align:center;color:var(--muted);font-size:13px}
+
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.summary{grid-auto-flow:column;overflow:auto}}
   </style>
 </head>
 <body>
-  <h1>Welcome to My GitHub Page!</h1>
-  <p>This is a placeholder webpage deployed using GitHub Pages.</p>
-  <p>Feel free to customize this page with your own content.</p>
+  <div class="container">
+    <header>
+      <h1>Expense Tracker</h1>
+      <div class="top-controls">
+        <button id="addBtn">+ Add Expense</button>
+        <button id="exportCsv" class="ghost">Export CSV</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-weight:700">Transactions</div>
+              <div style="color:var(--muted);font-size:13px">Add, edit or delete entries. Data saved locally.</div>
+            </div>
+            <div class="filters">
+              <select id="filterCategory">
+                <option value="all">All categories</option>
+                <option value="Travel">Travel</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Food">Food</option>
+                <option value="Other">Other</option>
+              </select>
+              <input id="searchInput" placeholder="Search description..." />
+            </div>
+          </div>
+
+          <table aria-label="expenses table">
+            <thead>
+              <tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right">Amount</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="expensesTbody">
+              <!-- rows inserted dynamically -->
+            </tbody>
+          </table>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+            <div style="color:var(--muted);font-size:13px">0 entries</div>
+            <div style="font-weight:700">Total: ₹<span id="totalAmount">0.00</span></div>
+          </div>
+        </div>
+
+        <footer>Made with ♥ — LocalStorage persistence • Simple & lightweight</footer>
+      </div>
+
+      <aside>
+        <div class="summary card">
+          <div class="stat">
+            <div>
+              <small>All-time spent</small>
+              <div class="big">₹<span id="allTime">0.00</span></div>
+            </div>
+            <div style="font-size:20px">📊</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <small>Travel</small>
+              <div class="big">₹<span id="travelTot">0.00</span></div>
+            </div>
+            <div>🚗</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <small>Utilities</small>
+              <div class="big">₹<span id="utilitiesTot">0.00</span></div>
+            </div>
+            <div>💡</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <small>Food</small>
+              <div class="big">₹<span id="foodTot">0.00</span></div>
+            </div>
+            <div>🍔</div>
+          </div>
+
+          <div class="stat">
+            <div>
+              <small>Other</small>
+              <div class="big">₹<span id="otherTot">0.00</span></div>
+            </div>
+            <div>🔖</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- modal -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2 id="modalTitle">Add Expense</h2>
+      <form id="expenseForm">
+        <div class="form-row">
+          <input type="date" id="dateInput" required />
+          <select id="categoryInput">
+            <option value="Travel">Travel</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Food">Food</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input type="text" id="descInput" placeholder="Description" required />
+        </div>
+        <div class="form-row">
+          <input type="number" id="amountInput" placeholder="Amount" step="0.01" min="0" required />
+          <input type="text" id="tagInput" placeholder="Tag (optional)" />
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+          <button type="button" id="cancelBtn" class="ghost">Cancel</button>
+          <button type="submit" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Simple Expense Tracker
+    const LS_KEY = 'expenses_v1';
+    let expenses = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    let editId = null;
+
+    // DOM refs
+    const addBtn = document.getElementById('addBtn');
+    const modal = document.getElementById('modalBackdrop');
+    const expenseForm = document.getElementById('expenseForm');
+    const dateInput = document.getElementById('dateInput');
+    const descInput = document.getElementById('descInput');
+    const amountInput = document.getElementById('amountInput');
+    const categoryInput = document.getElementById('categoryInput');
+    const tagInput = document.getElementById('tagInput');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const modalTitle = document.getElementById('modalTitle');
+
+    const tbody = document.getElementById('expensesTbody');
+    const totalAmount = document.getElementById('totalAmount');
+    const allTime = document.getElementById('allTime');
+    const travelTot = document.getElementById('travelTot');
+    const utilitiesTot = document.getElementById('utilitiesTot');
+    const foodTot = document.getElementById('foodTot');
+    const otherTot = document.getElementById('otherTot');
+    const filterCategory = document.getElementById('filterCategory');
+    const searchInput = document.getElementById('searchInput');
+    const exportCsv = document.getElementById('exportCsv');
+
+    function saveToStorage(){
+      localStorage.setItem(LS_KEY, JSON.stringify(expenses));
+    }
+
+    function renderExpenses(){
+      const filter = filterCategory.value;
+      const q = searchInput.value.trim().toLowerCase();
+      tbody.innerHTML = '';
+      const visible = expenses
+        .filter(e => filter === 'all' ? true : e.category === filter)
+        .filter(e => e.description.toLowerCase().includes(q) || (e.tag||'').toLowerCase().includes(q));
+
+      visible.sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+      for(const e of visible){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${e.date}</td>
+          <td>${escapeHtml(e.description)}${e.tag?` <small style="color:var(--muted)"> · ${escapeHtml(e.tag)}</small>`:''}</td>
+          <td>${e.category}</td>
+          <td style="text-align:right">₹${Number(e.amount).toFixed(2)}</td>
+          <td class="actions">
+            <button class="ghost" data-id="${e.id}" onclick="onEdit('${e.id}')">Edit</button>
+            <button class="ghost" data-id="${e.id}" onclick="onDelete('${e.id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      document.querySelector('.card footer')?.textContent;
+      document.querySelector('.card footer');
+      // counts and totals
+      document.querySelector('.card div[style*="0 entries"]');
+      const total = expenses.reduce((s,x)=>s + Number(x.amount),0);
+      totalAmount.textContent = total.toFixed(2);
+      allTime.textContent = total.toFixed(2);
+
+      const sums = {Travel:0, Utilities:0, Food:0, Other:0};
+      expenses.forEach(x=>{ if(sums[x.category]!==undefined) sums[x.category]+=Number(x.amount) });
+      travelTot.textContent = sums.Travel.toFixed(2);
+      utilitiesTot.textContent = sums.Utilities.toFixed(2);
+      foodTot.textContent = sums.Food.toFixed(2);
+      otherTot.textContent = sums.Other.toFixed(2);
+
+      // entry count
+      const countEl = document.querySelector('.card > div > div:last-child');
+      // update bottom-left text showing number of entries
+      const leftInfo = document.querySelector('.card > div > div > div');
+      const entriesCount = expenses.length;
+      // safer: update the small text under header by replacing the element
+      const infoBar = document.querySelector('.card > div');
+      // set the bottom-left div
+      const bottomRow = document.querySelector('.card > div + table + div');
+      if(bottomRow){
+        bottomRow.querySelector('div').textContent = `${entriesCount} entries`;
+      }
+    }
+
+    function escapeHtml(text){
+      return text.replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]});
+    }
+
+    function openModal(mode='add', data=null){
+      modal.style.display = 'flex';
+      if(mode==='add'){
+        modalTitle.textContent = 'Add Expense';
+        expenseForm.reset();
+        const today = new Date().toISOString().slice(0,10);
+        dateInput.value = today;
+        editId = null;
+      } else if(mode==='edit'){
+        modalTitle.textContent = 'Edit Expense';
+        dateInput.value = data.date;
+        descInput.value = data.description;
+        amountInput.value = data.amount;
+        categoryInput.value = data.category;
+        tagInput.value = data.tag || '';
+        editId = data.id;
+      }
+      dateInput.focus();
+    }
+    function closeModal(){ modal.style.display = 'none'; }
+
+    addBtn.addEventListener('click', ()=> openModal('add'));
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+    expenseForm.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const payload = {
+        id: editId || 'id_'+Date.now(),
+        date: dateInput.value,
+        description: descInput.value.trim(),
+        amount: parseFloat(amountInput.value) || 0,
+        category: categoryInput.value,
+        tag: tagInput.value.trim()
+      };
+
+      if(editId){ // update
+        const idx = expenses.findIndex(x=>x.id===editId);
+        if(idx>-1) expenses[idx] = payload;
+      } else { // add
+        expenses.push(payload);
+      }
+      saveToStorage();
+      renderExpenses();
+      closeModal();
+    });
+
+    // expose edit/delete to window so onclick in rows works
+    window.onEdit = function(id){
+      const rec = expenses.find(x=>x.id===id);
+      if(!rec) return alert('Record not found');
+      openModal('edit', rec);
+    }
+    window.onDelete = function(id){
+      if(!confirm('Delete this entry?')) return;
+      expenses = expenses.filter(x=>x.id!==id);
+      saveToStorage();
+      renderExpenses();
+    }
+
+    filterCategory.addEventListener('change', renderExpenses);
+    searchInput.addEventListener('input', renderExpenses);
+
+    // export CSV
+    exportCsv.addEventListener('click', ()=>{
+      if(!expenses.length) return alert('No data to export');
+      const header = ['id','date','description','category','amount','tag'];
+      const rows = [header.join(',')].concat(expenses.map(e=>[
+        e.id,
+        e.date,
+        '"'+(e.description.replace(/"/g,'""'))+'"',
+        e.category,
+        e.amount,
+        '"'+(e.tag?e.tag.replace(/"/g,'""'):'')+'"'
+      ].join(',')));
+      const csv = rows.join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='expenses.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // initial render
+    renderExpenses();
+  </script>
 </body>
 </html>
